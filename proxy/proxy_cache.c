@@ -18,6 +18,8 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <fcntl.h>
+#include <time.h>
+#include <dirent.h>
 
 //////////////////////////////////////////////////////////////////
 // sha1_hash							//
@@ -37,13 +39,13 @@ char *sha1_hash(char *input_url, char *hashed_url) {
 	char hashed_hex[41];
 	int i;
 	
-	SHA1(input_url, 160, hashed_160bits); // Encrypt url to 160 bits
+	SHA1(input_url, strlen(input_url), hashed_160bits); // Encrypt url to 160 bits
 		
 	for(i=0; i < sizeof(hashed_160bits); i++) {
 		sprintf(hashed_hex + i*2, "%02x", hashed_160bits[i]); // Insert encrypted url into the hashed_hex variable in hexadecimal
-	}        
+	}
+
 	strcpy(hashed_url, hashed_hex); // Copy the encrypted url, which has been changed to a hexadecimal number, to the return value
-	
 	return hashed_url;
 }
 
@@ -65,6 +67,32 @@ char *getHomeDir(char *home) {
 	return home;
 }
 
+
+void makeDirAndFile(char* home_dir, char *file_name) {
+	char file_name_ow[256]; // overwrite to prevent null terminator from being included in file names
+
+	// Make Directory
+	umask(0); // Command to give directory all permissions
+	int isDirCreated = mkdir(home_dir, 0777);
+	if (isDirCreated == -1) { 
+		printf("mkdir Error Occur!\n");
+		return;
+	}
+
+	// Make File
+	strcpy(file_name_ow,file_name);
+	strcat(home_dir, "/");
+	strcat(home_dir, file_name_ow);
+
+	int isFileCreated = creat(home_dir, 0777);
+	if (isFileCreated == -1) {
+		printf("creat Error Occur!\n");
+		return;
+	}
+	return;
+}
+
+
 //////////////////////////////////////////////////////////////////
 // main								//
 // ============================================================ //
@@ -75,13 +103,28 @@ char *getHomeDir(char *home) {
 // ories and files with encrypted url, and to end the program a //
 // fter all work is done. 					//
 //////////////////////////////////////////////////////////////////
+
 int main()
 {	
 	char *input_url;
 	char *hashed_url;
 	char home_dir[1024];
-	char extracted_url[1024]; // Url extracted to name directories and files using encrypted url
-	char file_name[1024]; // actual file name
+
+	char dir_name[256]={"0"};
+	char file_name[256]={"0"}; // actual file name
+
+	int hit_cnt = 0, miss_cnt = 0;
+
+	DIR *dir = NULL; // directory pointer declaration
+	struct dirent *file = NULL; 
+
+
+	time_t currentTime = time(NULL); // get Current Time
+	struct tm *local_time = localtime(&currentTime);
+	if (local_time == NULL) {
+		printf("plocal Error Occur!\n");
+		return 0;
+	}
 	
 	while(1) {
 		input_url = malloc(sizeof(char)* 1024); // dynamic memory allocation
@@ -98,34 +141,56 @@ int main()
 
 		sha1_hash(input_url, hashed_url); // url encryption
 		getHomeDir(home_dir); // Get Home Directory Path
-		
-		for (int i = 3; (int)*(hashed_url + i) != 0; i++) { // Extracting elements from encrypted url until NULL characters are released
-			extracted_url[i-3] = *(hashed_url + i);
-		}
-		strcpy(file_name,extracted_url); // Copy for not including the termination character ('0') in the file name
-		
 
+		for (int i = 0; i < 3; i++) {
+			dir_name[i] = *(hashed_url + i);
+
+		}
 		strcat(home_dir, "/cache/");
-		strncat(home_dir, hashed_url, 3); // Use only the first three letters of encrypted url as the name of the directory
-		umask(0); // Command to give directory all permissions
-		int isDirCreated = mkdir(home_dir, 0777);
-		if (isDirCreated == -1) { 
-			printf("mkdir Error Occur!\n");
-			return 0;
+		strcat(home_dir, dir_name);
+		
+		// for (int i = 3; (int)*(hashed_url + i) != 0; i++) { // Extracting elements from encrypted url until NULL characters are released
+		// 	extracted_url[i-3] = *(hashed_url + i);
+		// }
+		// strcpy(file_name,extracted_url); // Copy for not including the termination character ('0') in the file name
+
+		for (int i =3; (int)*(hashed_url + i) != 0; i++) {
+			file_name[i-3] = *(hashed_url + i);
 		}
 
-		
-		strcat(home_dir, "/");
-		strcat(home_dir, file_name);
-		int isFileCreated = creat(home_dir, 0777);
-		if (isFileCreated == -1) {
-			printf("creat Error Occur!\n");
-			return 0;
+		dir = opendir(home_dir);
+		if (dir == NULL) {
+			printf("MISS no dir exist\n");
+			// need to change this part to log.
+			printf("[MISS] %s - [%d/%d/%d, %d:%d:%d]\n", input_url, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
+			makeDirAndFile(home_dir, file_name);
 		}
+		else {
+			for (file = readdir(dir); strlen(file->d_name) < 3; file = readdir(dir)) {
+				continue;
+			}
+
+			if (strcmp(file -> d_name, file_name) == 0) {
+				printf("HIT dir and file exist");
+				// need to change this part to log.
+				printf("[Hit] %s/ %s - [%d/%d/%d, %d:%d:%d]\n", dir_name, file->d_name, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
+				printf("[Hit]%s\n", input_url);
+				
+			}
+			else {
+				printf("MISS no file matched");
+				// need to change this part to log.
+				printf("[MISS] %s - [%d/%d/%d, %d:%d:%d]\n", input_url, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
+				makeDirAndFile(home_dir, file_name);
+			}
+		}
+		closedir(dir);
 	
 		free(hashed_url); // memory deallocation
 		free(input_url);
-	       	
 	}
+
+
 	return 0;
 }
+
