@@ -1,13 +1,16 @@
 //////////////////////////////////////////////////////////////////
 // File Name		: proxy_cache.c				//
-// Date			: 2022/03/30				//
+// Date			: 2022/04/04				//
 // Os			: Ubuntu 16.04 LTS 64bits		//
 // Author		: Lee Yeon Geol				//
 // Student ID		: 2018202076				//
 // ------------------------------------------------------------	//
-// Title : System Programming Assignment #1-1 (proxy server)	//
-// Description : hash the input by the user. It is a task to //
-//		 Create directories and files with hashed url//
+// Title : System Programming Assignment #1-2 (proxy server)	//
+// Description : Create directories and files by hash the URL	//
+//		 entered by the user and checking if the URL is //
+//		 a previously entered value. Record all of thes //
+// 		 e actionsin the logfile and exit the program 	//
+//		 when all of them are finished.			//
 //////////////////////////////////////////////////////////////////
 #include <stdio.h>
 #include <string.h>
@@ -234,7 +237,7 @@ int main()
 			time(&current_time);
 			local_time = localtime(&current_time); // current time reinitialization
 			
-			fprintf(f, "[MISS] %s - [%d/%d/%d, %d:%d:%d] \n", input_url, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour - 8, local_time->tm_min, local_time->tm_sec); // write the log file
+			fprintf(f, "[MISS] %s - [%d/%d/%d, %d:%d:%d] \n", input_url, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour, local_time->tm_min, local_time->tm_sec); // write the log file
 			
 			makeDir(home_dir);
 			makeFile(home_dir, file_name);
@@ -249,7 +252,7 @@ int main()
 				time(&current_time);
 				local_time = localtime(&current_time);
 
-				fprintf(f, "[Hit] %s/ %s - [%d/%d/%d, %d:%d:%d] \n", dir_name, file->d_name, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour - 8, local_time->tm_min, local_time->tm_sec);
+				fprintf(f, "[Hit] %s/ %s - [%d/%d/%d, %d:%d:%d] \n", dir_name, file->d_name, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
 				fprintf(f, "[Hit] %s \n", input_url);
 				
 				hit_cnt++;
@@ -258,7 +261,7 @@ int main()
 				time(&current_time);
 				local_time = localtime(&current_time);
 
-				fprintf(f, "[MISS] %s - [%d/%d/%d, %d:%d:%d]\n", input_url, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour - 8, local_time->tm_min, local_time->tm_sec);
+				fprintf(f, "[MISS] %s - [%d/%d/%d, %d:%d:%d]\n", input_url, 1900+local_time->tm_year, local_time->tm_mon+1, local_time->tm_mday, local_time->tm_hour, local_time->tm_min, local_time->tm_sec);
 				
 				makeDir(home_dir);
 				makeFile(home_dir, file_name);
